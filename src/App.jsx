@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext.jsx'
 import Login from './pages/Login'
 import Register from './pages/Register.jsx'
 import Home from './pages/Home.jsx'
+import Profile from './pages/Profile.jsx'
 
 
 function ProtectedRoute({ children }) {
@@ -19,6 +20,11 @@ export default function App() {
         <ProtectedRoute>
           <Home />
         </ProtectedRoute>
+      } />
+      <Route path="/profile/:id" element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
       } />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
