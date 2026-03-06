@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api.js'
 import { getSports, getPositionsBySport } from '../services/catalogService.js'
+import logo from '../assets/SportLink-Logo-BordeBlanco.png'
 
 export default function Profile() {
   const { id } = useParams()
@@ -20,12 +21,15 @@ export default function Profile() {
 
   const [userForm, setUserForm] = useState({ phoneNumber: '' })
   const [profileForm, setProfileForm] = useState({})
+  const [friendshipStatus, setFriendshipStatus] = useState(null)
+  const [friendshipId, setFriendshipId] = useState(null)
 
   const isOwner = parseInt(id) === user.userId
 
   useEffect(() => {
     loadProfile()
     getSports().then(setSports).catch(() => {})
+    if (!isOwner) loadFriendshipStatus()
   }, [id])
 
   const loadProfile = async () => {
@@ -100,9 +104,9 @@ export default function Profile() {
     }
   }
 
-  const availablePositions = positions.filter(p =>
-    (profileForm.sportIds || []).includes(p.sport.id)
-  )
+const availablePositions = positions.filter(p =>
+  (profileForm.sportIds || []).includes(p.sport?.id ?? p.sport)
+)
 
   const handleSave = async () => {
   setSaving(true)
@@ -151,6 +155,59 @@ export default function Profile() {
     return '?'
   }
 
+  const loadFriendshipStatus = async () => {
+  try {
+    const { data } = await api.get('/friendships/friends')
+    const isFriend = data.data.find(f =>
+      f.requester.id === parseInt(id) || f.addressee.id === parseInt(id)
+    )
+    if (isFriend) {
+      setFriendshipStatus('accepted')
+      setFriendshipId(isFriend.id)
+      return
+    }
+
+    const { data: sent } = await api.get('/friendships/pending/sent')
+    const sentRequest = sent.data.find(f => f.addressee.id === parseInt(id))
+    if (sentRequest) {
+      setFriendshipStatus('pending_sent')
+      setFriendshipId(sentRequest.id)
+      return
+    }
+
+    const { data: received } = await api.get('/friendships/pending/received')
+    const receivedRequest = received.data.find(f => f.requester.id === parseInt(id))
+    if (receivedRequest) {
+      setFriendshipStatus('pending_received')
+      setFriendshipId(receivedRequest.id)
+      return
+    }
+
+    setFriendshipStatus(null)
+  } catch {
+    setFriendshipStatus(null)
+  }
+}
+
+const handleSendRequest = async () => {
+  try {
+    await api.post('/friendships', { addresseeId: parseInt(id) })
+    setFriendshipStatus('pending_sent')
+  } catch (err) {
+    setError(err.response?.data?.message || 'Error al enviar solicitud')
+  }
+}
+
+const handleRemoveFriend = async () => {
+  try {
+    await api.delete(`/friendships/${friendshipId}`)
+    setFriendshipStatus(null)
+    setFriendshipId(null)
+  } catch (err) {
+    setError(err.response?.data?.message || 'Error al eliminar amistad')
+  }
+}
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#f0f4ff' }}>
       <p className="text-gray-400">Cargando perfil...</p>
@@ -161,35 +218,63 @@ export default function Profile() {
     <div className="min-h-screen" style={{ backgroundColor: '#f0f4ff' }}>
 
       {/* NAVBAR */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between pl-2 pr-6 shadow-md"
-        style={{ backgroundColor: '#2D3A8C' }}>
-        <div className="overflow-hidden h-12 flex items-center">
-          <img src="/SportLink-Logo-BordeBlanco.png" alt="SportLink" className="h-20 -my-6" />
+      <nav className="fixed top-0 left-0 right-0 z-50 shadow-lg" style={{ backgroundColor: '#2D3A8C' }}>
+        <div className="w-full h-16 flex items-center justify-between px-4 md:px-6">
+          <img src={logo} alt="SportLink" className="h-35 w-auto"  onClick={() => navigate('/')} />
+          <button
+            onClick={() => navigate('/')}
+            className="text-white text-sm font-medium transition"
+            onMouseEnter={e => e.currentTarget.style.color = '#7DD4E8'}
+            onMouseLeave={e => e.currentTarget.style.color = 'white'}
+          >
+            ← Volver al inicio
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/')}
-          className="text-white text-sm font-medium transition"
-          onMouseEnter={e => e.currentTarget.style.color = '#7DD4E8'}
-          onMouseLeave={e => e.currentTarget.style.color = 'white'}
-        >
-          ← Volver al inicio
-        </button>
       </nav>
 
       <div className="max-w-2xl mx-auto pt-24 px-6 pb-10">
 
         {/* HEADER DEL PERFIL */}
         <div className="bg-white rounded-2xl shadow-sm p-6 mb-4 flex items-center gap-5">
-          <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
-            style={{ backgroundColor: '#2D3A8C' }}>
-            {getInitials()}
-          </div>
-          <div>
-            <h1 className="text-xl font-bold" style={{ color: '#2D3A8C' }}>{getDisplayName()}</h1>
-            <p className="text-sm text-gray-400">{profile?.userType}</p>
-            <p className="text-sm text-gray-500">{profile?.email}</p>
-          </div>
-        </div>
+  <div className="w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white flex-shrink-0"
+    style={{ backgroundColor: '#2D3A8C' }}>
+    {getInitials()}
+  </div>
+  <div className="flex-1">
+    <h1 className="text-xl font-bold" style={{ color: '#2D3A8C' }}>{getDisplayName()}</h1>
+    <p className="text-sm text-gray-400">{profile?.userType}</p>
+    <p className="text-sm text-gray-500">{profile?.email}</p>
+  </div>
+
+  {!isOwner && friendshipStatus === null && (
+    <button
+      onClick={handleSendRequest}
+      className="px-5 py-2 rounded-xl font-semibold text-white text-sm transition"
+      style={{ backgroundColor: '#2D3A8C' }}
+      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#7DD4E8'}
+      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2D3A8C'}
+    >
+      Enviar solicitud
+    </button>
+  )}
+  {!isOwner && friendshipStatus === 'pending_sent' && (
+    <button disabled className="px-5 py-2 rounded-xl font-semibold text-white text-sm opacity-50"
+      style={{ backgroundColor: '#6b7280' }}>
+      Solicitud enviada
+    </button>
+  )}
+  {!isOwner && friendshipStatus === 'accepted' && (
+    <button
+      onClick={handleRemoveFriend}
+      className="px-5 py-2 rounded-xl font-semibold text-white text-sm transition"
+      style={{ backgroundColor: '#ef4444' }}
+      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#dc2626'}
+      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#ef4444'}
+    >
+      Eliminar amistad
+    </button>
+  )}
+</div>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm">
@@ -290,45 +375,63 @@ export default function Profile() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Deportes</label>
                   <div className="flex flex-wrap gap-2">
-                    {sports.map(sport => (
-                      <button
-                        key={sport.id}
-                        type="button"
-                        onClick={() => editing && isOwner && toggleSport(sport.id)}
-                        className="px-4 py-2 rounded-xl text-sm font-medium border-2 transition"
-                        style={{
-                          borderColor: (profileForm.sportIds || []).includes(sport.id) ? '#2D3A8C' : '#e5e7eb',
-                          backgroundColor: (profileForm.sportIds || []).includes(sport.id) ? '#2D3A8C' : 'white',
-                          color: (profileForm.sportIds || []).includes(sport.id) ? 'white' : '#6b7280',
-                          cursor: editing && isOwner ? 'pointer' : 'default',
-                        }}
-                      >
-                        {sport.name}
-                      </button>
-                    ))}
+                    {editing && isOwner ? (
+                      sports.map(sport => (
+                        <button
+                          key={sport.id}
+                          type="button"
+                          onClick={() => toggleSport(sport.id)}
+                          className="px-4 py-2 rounded-xl text-sm font-medium border-2 transition"
+                          style={{
+                            borderColor: (profileForm.sportIds || []).includes(sport.id) ? '#2D3A8C' : '#e5e7eb',
+                            backgroundColor: (profileForm.sportIds || []).includes(sport.id) ? '#2D3A8C' : 'white',
+                            color: (profileForm.sportIds || []).includes(sport.id) ? 'white' : '#6b7280',
+                          }}
+                        >
+                          {sport.name}
+                        </button>
+                      ))
+                    ) : (
+                      profile?.athleteProfile?.sports?.length > 0
+                        ? profile.athleteProfile.sports.map(sport => (
+                            <span key={sport.id} className="px-4 py-2 rounded-xl text-sm font-medium text-white"
+                              style={{ backgroundColor: '#2D3A8C' }}>
+                              {sport.name}
+                            </span>
+                          ))
+                        : <p className="text-sm text-gray-400">Sin deportes asignados</p>
+                    )}
                   </div>
                 </div>
 
-                {availablePositions.length > 0 && (
+                {(editing ? availablePositions.length > 0 : profile?.athleteProfile?.positions?.length > 0) && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Posiciones</label>
                     <div className="flex flex-wrap gap-2">
-                      {availablePositions.map(pos => (
-                        <button
-                          key={pos.id}
-                          type="button"
-                          onClick={() => editing && isOwner && togglePosition(pos.id)}
-                          className="px-4 py-2 rounded-xl text-sm font-medium border-2 transition"
-                          style={{
-                            borderColor: (profileForm.positionIds || []).includes(pos.id) ? '#7DD4E8' : '#e5e7eb',
-                            backgroundColor: (profileForm.positionIds || []).includes(pos.id) ? '#7DD4E8' : 'white',
-                            color: (profileForm.positionIds || []).includes(pos.id) ? 'white' : '#6b7280',
-                            cursor: editing && isOwner ? 'pointer' : 'default',
-                          }}
-                        >
-                          {pos.name}
-                        </button>
-                      ))}
+                      {editing && isOwner ? (
+                        availablePositions.map(pos => (
+                          <button
+                            key={pos.id}
+                            type="button"
+                            onClick={() => togglePosition(pos.id)}
+                            className="px-4 py-2 rounded-xl text-sm font-medium border-2 transition"
+                            style={{
+                              borderColor: (profileForm.positionIds || []).includes(pos.id) ? '#7DD4E8' : '#e5e7eb',
+                              backgroundColor: (profileForm.positionIds || []).includes(pos.id) ? '#7DD4E8' : 'white',
+                              color: (profileForm.positionIds || []).includes(pos.id) ? 'white' : '#6b7280',
+                            }}
+                          >
+                            {pos.name}
+                          </button>
+                        ))
+                      ) : (
+                        profile.athleteProfile.positions.map(pos => (
+                          <span key={pos.id} className="px-4 py-2 rounded-xl text-sm font-medium"
+                            style={{ backgroundColor: '#7DD4E8', color: '#2D3A8C' }}>
+                            {pos.name}
+                          </span>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -388,42 +491,42 @@ export default function Profile() {
 
         {/* BOTONES */}
         {isOwner && (
-          <div className="flex justify-end gap-3">
-            {editing ? (
-              <>
-                <button
-                  onClick={() => { setEditing(false); loadProfile() }}
-                  className="px-6 py-3 rounded-xl font-semibold text-white text-sm transition"
-                  style={{ backgroundColor: '#ef4444' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#dc2626'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#ef4444'}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="px-6 py-3 rounded-xl font-semibold text-white text-sm transition disabled:opacity-50"
-                  style={{ backgroundColor: '#22c55e' }}
-                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#16a34a'}
-                  onMouseLeave={e => e.currentTarget.style.backgroundColor = '#22c55e'}
-                >
-                  {saving ? 'Guardando...' : 'Guardar cambios'}
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setEditing(true)}
-                className="px-6 py-3 rounded-xl font-semibold text-white text-sm transition"
-                style={{ backgroundColor: '#2D3A8C' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#7DD4E8'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2D3A8C'}
-              >
-                Editar perfil
-              </button>
-            )}
-          </div>
-        )}
+  <div className="flex justify-end gap-3">
+    {editing ? (
+      <>
+        <button
+          onClick={() => { setEditing(false); loadProfile() }}
+          className="px-6 py-3 rounded-xl font-semibold text-white text-sm transition"
+          style={{ backgroundColor: '#ef4444' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#dc2626'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#ef4444'}
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-6 py-3 rounded-xl font-semibold text-white text-sm transition disabled:opacity-50"
+          style={{ backgroundColor: '#22c55e' }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = '#16a34a'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = '#22c55e'}
+        >
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+      </>
+    ) : (
+      <button
+        onClick={() => setEditing(true)}
+        className="px-6 py-3 rounded-xl font-semibold text-white text-sm transition"
+        style={{ backgroundColor: '#2D3A8C' }}
+        onMouseEnter={e => e.currentTarget.style.backgroundColor = '#7DD4E8'}
+        onMouseLeave={e => e.currentTarget.style.backgroundColor = '#2D3A8C'}
+      >
+        Editar perfil
+      </button>
+    )}
+  </div>
+)}
 
       </div>
     </div>
