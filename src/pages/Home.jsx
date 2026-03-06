@@ -150,7 +150,7 @@ const loadFriendshipData = async () => {
 
 const handleAccept = async (friendshipId) => {
   try {
-    await api.patch(`/friendships/${friendshipId}`, { status: 'accepted' })
+    await api.patch(`/friendships/${friendshipId}`, { status: 'ACCEPTED' })
     loadFriendshipData()
   } catch (err) {
     console.error(err)
@@ -159,7 +159,7 @@ const handleAccept = async (friendshipId) => {
 
 const handleReject = async (friendshipId) => {
   try {
-    await api.patch(`/friendships/${friendshipId}`, { status: 'rejected' })
+    await api.patch(`/friendships/${friendshipId}`, { status: 'REJECTED' })
     loadFriendshipData()
   } catch (err) {
     console.error(err)
