@@ -2,3 +2,20 @@
 * {
   font-family: 'Inter', sans-serif;
 }
+@layer base {
+  button,
+  a,
+  [role="button"],
+  label[for],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  input:disabled {
+    cursor: not-allowed;
+  }
+}
