@@ -245,8 +245,8 @@ const availablePositions = positions.filter(p => profileData.sportIds.includes(p
                 onMouseEnter={e => e.currentTarget.style.color = '#7DD4E8'}
                 onMouseLeave={e => e.currentTarget.style.color = '#2D3A8C'}
                 >
-              </a>
                 Iniciá sesión
+              </a>
             </p>
           </form>
         )}
