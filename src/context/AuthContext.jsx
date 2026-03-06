@@ -1,3 +1,4 @@
+import api from '../services/api'
 import { createContext, useContext, useState } from 'react'
 
 const AuthContext = createContext(null)
@@ -6,8 +7,13 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const token = sessionStorage.getItem('accessToken')
     if (!token) return null
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return { userId: payload.userId, userType: payload.userType }
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      return { userId: payload.userId, userType: payload.userType }
+    } catch {
+      sessionStorage.clear()
+      return null
+    }
   })
 
   const login = (accessToken, refreshToken) => {
@@ -17,9 +23,19 @@ export function AuthProvider({ children }) {
     setUser({ userId: payload.userId, userType: payload.userType })
   }
 
-  const logout = () => {
-    sessionStorage.clear()
-    setUser(null)
+  const logout = async () => {
+    try {
+      const refreshToken = sessionStorage.getItem('refreshToken')
+      if (refreshToken) {
+        await api.post('/auth/logout', { refreshToken })
+      }
+    } catch {
+      // Si la llamada falla igual limpiamos la sesión del cliente.
+      // El token expirará solo en 7 días en el peor caso.
+    } finally {
+      sessionStorage.clear()
+      setUser(null)
+    }
   }
 
   return (

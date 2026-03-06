@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
 })
 
 // Antes de cada request, agrega el token
@@ -27,7 +27,7 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = sessionStorage.getItem('refreshToken')
-        const { data } = await axios.post('http://localhost:3000/auth/refresh', { refreshToken })
+        const { data } = await api.post('/auth/refresh', { refreshToken })
 
         sessionStorage.setItem('accessToken', data.data.accessToken)
         sessionStorage.setItem('refreshToken', data.data.refreshToken)
