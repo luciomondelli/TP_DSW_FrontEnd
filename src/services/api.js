@@ -4,16 +4,14 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
 })
 
-// Antes de cada request, agrega el token
 api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('accessToken')
+  const token = localStorage.getItem('accessToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
 
-// Si el token expira, reintenta con el refresh token
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -26,17 +24,17 @@ api.interceptors.response.use(
       original._retry = true
 
       try {
-        const refreshToken = sessionStorage.getItem('refreshToken')
+        const refreshToken = localStorage.getItem('refreshToken')
         const { data } = await api.post('/auth/refresh', { refreshToken })
 
-        sessionStorage.setItem('accessToken', data.data.accessToken)
-        sessionStorage.setItem('refreshToken', data.data.refreshToken)
+        localStorage.setItem('accessToken', data.data.accessToken)
+        localStorage.setItem('refreshToken', data.data.refreshToken)
 
         original.headers.Authorization = `Bearer ${data.data.accessToken}`
         return api(original)
 
       } catch {
-        sessionStorage.clear()
+        localStorage.clear()
         window.location.href = '/login'
       }
     }
