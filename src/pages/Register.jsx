@@ -80,10 +80,9 @@ const togglePosition = (id) => {
   }
 }
 
-const availablePositions = positions.filter(p => {
-  const sportId = typeof p.sport === 'object' ? p.sport?.id : p.sport
-  return profileData.sportIds.includes(sportId)
-})
+const availablePositions = Array.isArray(profileData.sportIds)
+    ? positions.filter(p => profileData.sportIds.includes(p.sport?.id))
+    : []
 
   const handleNext = (e) => {
     e.preventDefault()
