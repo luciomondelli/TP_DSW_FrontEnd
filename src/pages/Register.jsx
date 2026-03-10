@@ -315,7 +315,7 @@ const availablePositions = positions.filter(p => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Deportes</label>
                   <div className="flex flex-wrap gap-2">
-                    {sports.map(sport => (
+                    {(sports || []).map(sport => (
                       <button
                             key={sport.id}
                             type="button"
