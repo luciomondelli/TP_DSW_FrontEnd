@@ -4,6 +4,13 @@ la carrera de Ingeniería en Sistemas de Información en la [Universidad Tecnol�
 
 En el siguiente link se encuentra la propuesta de la aplicación a desarrollar: [proposal.md](https://github.com/Tomas-Wardoloff/tp/blob/main/proposal.md)
 
+## Stack Tegnológico
+- React 18
+- Vite
+- React Router DOM
+- Axios
+- Tailwind CSS
+
 ## Instalación
 1. Clona el repositorio 
 ```sh
@@ -12,11 +19,11 @@ En el siguiente link se encuentra la propuesta de la aplicación a desarrollar: 
 ```
 2. Instala las dependencias
 ```sh
-    pnpm install | npm install
+    npm install
 ```
 3. Inicia la aplicación 
 ```sh
-    pnpm run dev | npm run dev
+    npm run dev
 ```
 4. Accede a la aplicacion, navegando a la ruta `http://localhost:5173` en tu navegador
 
